@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <script src="https://telegram.org"></script>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); }
+        button { padding: 20px 40px; font-size: 20px; border-radius: 15px; border: none; background: #0088cc; color: white; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <h2>Управление ESP</h2>
+    <button id="toggleBtn">ВКЛ/ВЫКЛ ПИН 2</button>
+    <script>
+        const tg = window.Telegram.WebApp;
+        tg.expand(); // Раскрыть на весь экран
+
+        document.getElementById('toggleBtn').addEventListener('click', () => {
+            // Отправляем данные боту (он их получит и перешлет на ESP)
+            tg.sendData("toggle_pin_2"); 
+        });
+    </script>
+</body>
+</html>
