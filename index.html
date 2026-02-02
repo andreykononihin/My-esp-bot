@@ -5,19 +5,43 @@
     <script src="https://telegram.org"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); }
-        button { padding: 20px 40px; font-size: 20px; border-radius: 15px; border: none; background: #0088cc; color: white; cursor: pointer; }
+
+        /* Стили самого переключателя (тумблера) */
+        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
+        .switch input { opacity: 0; width: 0; height: 0; } /* Прячем стандартный чекбокс */
+
+        /* Ползунок (слайдер) */
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
+
+        input:checked + .slider { background-color: #2196F3; /* Цвет когда ВКЛ */ }
+        input:checked + .slider:before { transform: translateX(26px); /* Передвигаем кружок */ }
+
     </style>
 </head>
 <body>
     <h2>Управление ESP</h2>
-    <button id="toggleBtn">ВКЛ/ВЫКЛ ПИН 2</button>
+
+    <!-- HTML-элемент ползунка -->
+    <label class="switch">
+        <input type="checkbox" id="toggleSwitch">
+        <span class="slider"></span>
+    </label>
+
     <script>
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Раскрыть на весь экран
+        tg.expand();
+        const toggleSwitch = document.getElementById('toggleSwitch');
 
-        document.getElementById('toggleBtn').addEventListener('click', () => {
-            // Отправляем данные боту (он их получит и перешлет на ESP)
-            tg.sendData("toggle_pin_2"); 
+        // Обработчик события переключения
+        toggleSwitch.addEventListener('change', function() {
+            if (this.checked) {
+                // Если включено (ползунок справа)
+                tg.sendData("PIN_ON");
+            } else {
+                // Если выключено (ползунок слева)
+                tg.sendData("PIN_OFF");
+            }
         });
     </script>
 </body>
