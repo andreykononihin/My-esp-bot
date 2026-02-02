@@ -37,7 +37,7 @@
         const topicControl = "andreykononihin/esp/control";
         
         // 2. ИСПРАВЛЕНО: Убран мусор из адреса, добавлен порт 8884 и путь /mqtt
-        const client = mqtt.connect('wss://://broker.hivemq.com');
+        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
 
         client.on('connect', () => {
             statusDiv.innerText = "Подключено к брокеру ✅";
