@@ -2,45 +2,60 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org"></script>
+    <!-- Подключаем MQTT библиотеку -->
+    <script src="https://unpkg.com"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: var(--tg-theme-bg-color); color: var(--tg-theme-text-color); }
-
-        /* Стили самого переключателя (тумблера) */
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
         .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
-        .switch input { opacity: 0; width: 0; height: 0; } /* Прячем стандартный чекбокс */
-
-        /* Ползунок (слайдер) */
+        .switch input { opacity: 0; width: 0; height: 0; }
         .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
         .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-
-        input:checked + .slider { background-color: #2196F3; /* Цвет когда ВКЛ */ }
-        input:checked + .slider:before { transform: translateX(26px); /* Передвигаем кружок */ }
-
+        input:checked + .slider { background-color: #2196F3; }
+        input:checked + .slider:before { transform: translateX(26px); }
+        #status { margin-top: 20px; font-size: 0.8em; opacity: 0.6; }
     </style>
 </head>
 <body>
     <h2>Управление ESP</h2>
 
-    <!-- HTML-элемент ползунка -->
     <label class="switch">
         <input type="checkbox" id="toggleSwitch">
         <span class="slider"></span>
     </label>
 
+    <div id="status">Подключение к брокеру...</div>
+
     <script>
         const tg = window.Telegram.WebApp;
         tg.expand();
-        const toggleSwitch = document.getElementById('toggleSwitch');
 
-        // Обработчик события переключения
+        const toggleSwitch = document.getElementById('toggleSwitch');
+        const statusDiv = document.getElementById('status');
+
+        // Настройки MQTT (те же, что в коде ESP)
+        const topicControl = "andreykononihin/esp/control";
+        // Подключаемся через WebSockets (порт 8000 для HiveMQ)
+        const client = mqtt.connect('ws://://broker.hivemq.com');
+
+        client.on('connect', () => {
+            statusDiv.innerText = "Подключено к брокеру ✅";
+        });
+
+        client.on('error', (err) => {
+            statusDiv.innerText = "Ошибка подключения: " + err;
+        });
+
+        // Обработчик ползунка
         toggleSwitch.addEventListener('change', function() {
             if (this.checked) {
-                // Если включено (ползунок справа)
-                tg.sendData("PIN_ON");
+                client.publish(topicControl, "PIN_ON");
+                // Виброотклик для красоты
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             } else {
-                // Если выключено (ползунок слева)
-                tg.sendData("PIN_OFF");
+                client.publish(topicControl, "PIN_OFF");
+                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             }
         });
     </script>
