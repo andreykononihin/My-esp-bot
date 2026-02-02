@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org"></script>
-    <!-- Подключаем MQTT библиотеку -->
+    <!-- ИСПРАВЛЕНО: Правильная ссылка на библиотеку -->
     <script src="https://unpkg.com"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
@@ -34,10 +34,10 @@
         const toggleSwitch = document.getElementById('toggleSwitch');
         const statusDiv = document.getElementById('status');
 
-        // Настройки MQTT (те же, что в коде ESP)
         const topicControl = "andreykononihin/esp/control";
-        // Подключаемся через WebSockets (порт 8000 для HiveMQ)
-        const client = mqtt.connect('wss://broker.hivemq.com');
+        
+        // ИСПРАВЛЕНО: Добавлен порт 8884 и путь /mqtt
+        const client = mqtt.connect('wss://://broker.hivemq.com');
 
         client.on('connect', () => {
             statusDiv.innerText = "Подключено к брокеру ✅";
@@ -47,11 +47,9 @@
             statusDiv.innerText = "Ошибка подключения: " + err;
         });
 
-        // Обработчик ползунка
         toggleSwitch.addEventListener('change', function() {
             if (this.checked) {
                 client.publish(topicControl, "PIN_ON");
-                // Виброотклик для красоты
                 if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
             } else {
                 client.publish(topicControl, "PIN_OFF");
