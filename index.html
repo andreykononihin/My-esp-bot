@@ -37,7 +37,7 @@
         // Настройки MQTT (те же, что в коде ESP)
         const topicControl = "andreykononihin/esp/control";
         // Подключаемся через WebSockets (порт 8000 для HiveMQ)
-        const client = mqtt.connect('ws://://broker.hivemq.com');
+        const client = mqtt.connect('wss://://broker.hivemq.com');
 
         client.on('connect', () => {
             statusDiv.innerText = "Подключено к брокеру ✅";
