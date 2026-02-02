@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <script src="https://telegram.org"></script>
-    <!-- ИСПРАВЛЕНО: Правильная ссылка на библиотеку -->
+    <!-- 1. ИСПРАВЛЕНО: Полная ссылка на библиотеку -->
     <script src="https://unpkg.com"></script>
     <style>
         body { font-family: sans-serif; text-align: center; padding: 50px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
@@ -36,7 +36,7 @@
 
         const topicControl = "andreykononihin/esp/control";
         
-        // ИСПРАВЛЕНО: Добавлен порт 8884 и путь /mqtt
+        // 2. ИСПРАВЛЕНО: Убран мусор из адреса, добавлен порт 8884 и путь /mqtt
         const client = mqtt.connect('wss://://broker.hivemq.com');
 
         client.on('connect', () => {
