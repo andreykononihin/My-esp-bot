@@ -3,59 +3,267 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://telegram.org"></script>
-    <!-- 1. ИСПРАВЛЕНО: Полная ссылка на библиотеку -->
-    <script src="https://unpkg.com"></script>
+    <title>Управление ESP8266 через MQTT</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.1.0/paho-mqtt.min.js"></script>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: var(--tg-theme-bg-color, #fff); color: var(--tg-theme-text-color, #000); }
-        .switch { position: relative; display: inline-block; width: 60px; height: 34px; }
-        .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #2196F3; }
-        input:checked + .slider:before { transform: translateX(26px); }
-        #status { margin-top: 20px; font-size: 0.8em; opacity: 0.6; }
+        body { 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            text-align: center;
+            color: #333;
+        }
+        .container { 
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 450px;
+            margin: 20px auto;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            backdrop-filter: blur(10px);
+        }
+        h1 { 
+            color: #2c3e50;
+            margin-bottom: 25px;
+            font-weight: 600;
+        }
+        .status-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border-left: 5px solid #3498db;
+        }
+        .led-status {
+            font-size: 28px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .controls {
+            display: flex;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 25px 0;
+        }
+        button {
+            padding: 16px 28px;
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 120px;
+            box-shadow: 0 4px 6px rgba(50, 50, 93, 0.11);
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 7px 14px rgba(50, 50, 93, 0.1);
+        }
+        button:active {
+            transform: translateY(1px);
+        }
+        .btn-on { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+        .btn-off { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        .btn-toggle { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
+        .btn-tg { background: linear-gradient(135deg, #0088cc 0%, #005999 100%); }
+        .info-panel {
+            background: #f1f8ff;
+            border-radius: 12px;
+            padding: 18px;
+            margin-top: 25px;
+            text-align: left;
+            border: 1px solid #d1e7ff;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { color: #6c757d; }
+        .info-value { 
+            font-weight: 500;
+            color: #495057;
+        }
+        .connection-status {
+            display: inline-block;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 15px;
+        }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .key-hint {
+            font-size: 13px;
+            color: #6c757d;
+            margin-top: 15px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
-    <h2>Управление ESP</h2>
-
-    <label class="switch">
-        <input type="checkbox" id="toggleSwitch">
-        <span class="slider"></span>
-    </label>
-
-    <div id="status">Подключение к брокеру...</div>
+    <div class="container">
+        <h1>🚀 Управление ESP8266</h1>
+        
+        <div class="connection-status disconnected" id="connStatus">
+            ❌ Не подключено к MQTT
+        </div>
+        
+        <div class="status-box">
+            <div style="font-size: 14px; color: #7f8c8d;">ТЕКУЩИЙ СТАТУС</div>
+            <div class="led-status" id="ledStatus">🔴 ВЫКЛЮЧЕНО</div>
+            <div style="color: #95a5a6; font-size: 14px;">
+                Последняя команда: <span id="lastCmd">нет</span>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn-on" onclick="sendCommand('ON')">✅ ВКЛЮЧИТЬ</button>
+            <button class="btn-off" onclick="sendCommand('OFF')">❌ ВЫКЛЮЧИТЬ</button>
+            <button class="btn-toggle" onclick="sendCommand('TOGGLE')">🔄 ПЕРЕКЛЮЧИТЬ</button>
+        </div>
+        
+        <div class="info-panel">
+            <div class="info-row">
+                <span class="info-label">📶 Сигнал Wi-Fi:</span>
+                <span class="info-value" id="wifiStr">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">🌐 IP адрес:</span>
+                <span class="info-value" id="ipAddr">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">🔗 MQTT брокер:</span>
+                <span class="info-value">srv2.clusterfly.ru:9992</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">👤 Пользователь:</span>
+                <span class="info-value">user_5e8d3cf8</span>
+            </div>
+        </div>
+        
+        <div class="key-hint">
+            Горячие клавиши: 1 (ВКЛ), 0 (ВЫКЛ), Пробел (Переключить)
+        </div>
+    </div>
 
     <script>
-        const tg = window.Telegram.WebApp;
-        tg.expand();
-
-        const toggleSwitch = document.getElementById('toggleSwitch');
-        const statusDiv = document.getElementById('status');
-
-        const topicControl = "andreykononihin/esp/control";
+    // Конфигурация MQTT
+    const clientId = "telegram_" + Math.random().toString(36).substr(2, 9);
+    const host = "srv2.clusterfly.ru";
+    const port = 9994; // WebSocket порт для браузера
+    const username = "user_5e8d3cf8";
+    const password = "12345678";
+    
+    const topicControl = "user_5e8d3cf8/esp/control";
+    const topicStatus = "user_5e8d3cf8/esp/status";
+    
+    let mqttClient = null;
+    let lastCommand = "нет";
+    
+    // Обновление интерфейса
+    function updateUI(data) {
+        // Обновление статуса LED
+        const ledStatus = document.getElementById('ledStatus');
+        const ledColor = data.led ? '#2ecc71' : '#e74c3c';
+        const ledText = data.led ? '🟢 ВКЛЮЧЕНО' : '🔴 ВЫКЛЮЧЕНО';
         
-        // 2. ИСПРАВЛЕНО: Убран мусор из адреса, добавлен порт 8884 и путь /mqtt
-        const client = mqtt.connect('wss://broker.hivemq.com:8884/mqtt');
-
-        client.on('connect', () => {
-            statusDiv.innerText = "Подключено к брокеру ✅";
-        });
-
-        client.on('error', (err) => {
-            statusDiv.innerText = "Ошибка подключения: " + err;
-        });
-
-        toggleSwitch.addEventListener('change', function() {
-            if (this.checked) {
-                client.publish(topicControl, "PIN_ON");
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
-            } else {
-                client.publish(topicControl, "PIN_OFF");
-                if (tg.HapticFeedback) tg.HapticFeedback.impactOccurred('medium');
+        ledStatus.innerHTML = ledText;
+        ledStatus.style.color = ledColor;
+        
+        // Обновление информации
+        document.getElementById('wifiStr').innerHTML = data.rssi ? data.rssi + ' dBm' : '—';
+        document.getElementById('ipAddr').innerHTML = data.ip || '—';
+        document.getElementById('lastCmd').innerHTML = lastCommand;
+    }
+    
+    // Подключение к MQTT
+    function connectMqtt() {
+        const client = new Paho.MQTT.Client(host, port, clientId);
+        
+        client.onConnectionLost = (response) => {
+            document.getElementById('connStatus').className = 'connection-status disconnected';
+            document.getElementById('connStatus').innerHTML = '❌ Отключено от MQTT';
+            setTimeout(connectMqtt, 3000);
+        };
+        
+        client.onMessageArrived = (message) => {
+            if(message.destinationName === topicStatus) {
+                try {
+                    const data = JSON.parse(message.payloadString);
+                    updateUI(data);
+                } catch(e) {
+                    console.error("Ошибка парсинга JSON:", e);
+                }
             }
-        });
+        };
+        
+        const options = {
+            userName: username,
+            password: password,
+            useSSL: true,
+            onSuccess: () => {
+                document.getElementById('connStatus').className = 'connection-status connected';
+                document.getElementById('connStatus').innerHTML = '✅ Подключено к MQTT';
+                client.subscribe(topicStatus, {qos: 0});
+            },
+            onFailure: (err) => {
+                console.error("Ошибка подключения:", err);
+                document.getElementById('connStatus').className = 'connection-status disconnected';
+                document.getElementById('connStatus').innerHTML = '❌ Ошибка подключения';
+                setTimeout(connectMqtt, 5000);
+            }
+        };
+        
+        client.connect(options);
+        mqttClient = client;
+    }
+    
+    // Отправка команды
+    function sendCommand(cmd) {
+        if(mqttClient && mqttClient.isConnected()) {
+            lastCommand = cmd;
+            const message = new Paho.MQTT.Message(cmd);
+            message.destinationName = topicControl;
+            mqttClient.send(message);
+            
+            // Визуальная обратная связь
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach(btn => btn.style.opacity = '0.7');
+            setTimeout(() => {
+                buttons.forEach(btn => btn.style.opacity = '1');
+            }, 300);
+        } else {
+            alert("Ошибка: нет подключения к MQTT брокеру");
+        }
+    }
+    
+    // Горячие клавиши
+    document.addEventListener('keydown', (e) => {
+        if(e.key === '1') sendCommand('ON');
+        else if(e.key === '0') sendCommand('OFF');
+        else if(e.key === ' ') {
+            e.preventDefault();
+            sendCommand('TOGGLE');
+        }
+    });
+    
+    // Автоматическое подключение при загрузке
+    window.addEventListener('load', connectMqtt);
+    
+    // Периодическая проверка соединения
+    setInterval(() => {
+        if(mqttClient && !mqttClient.isConnected()) {
+            connectMqtt();
+        }
+    }, 10000);
     </script>
 </body>
 </html>
