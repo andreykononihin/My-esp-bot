@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f2f5;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             min-height: 100vh;
             padding: 15px;
             text-align: center;
@@ -15,65 +15,65 @@
             margin: 0;
         }
         .container {
-            background: white;
-            border-radius: 15px;
-            padding: 25px;
-            max-width: 450px;
-            margin: 0 auto;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.97);
+            border-radius: 20px;
+            padding: 20px;
+            max-width: 420px;
+            margin: 15px auto;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
         }
         h1 {
             color: #2c3e50;
-            margin-bottom: 20px;
-            font-size: 22px;
+            margin-bottom: 15px;
+            font-size: 20px;
         }
+        .connection-status {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 500;
+            margin-bottom: 15px;
+            display: inline-block;
+        }
+        .connected { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .disconnected { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         .status-box {
             background: #f8f9fa;
-            border-radius: 10px;
+            border-radius: 12px;
             padding: 15px;
             margin: 15px 0;
             border: 2px solid #e9ecef;
         }
         .led-status {
-            font-size: 24px;
+            font-size: 22px;
             font-weight: bold;
             margin: 10px 0;
+            padding: 5px;
         }
         .controls {
             display: flex;
             justify-content: center;
-            flex-wrap: wrap;
             gap: 10px;
             margin: 20px 0;
+            flex-wrap: wrap;
         }
         button {
-            padding: 14px 24px;
+            padding: 12px 20px;
             border: none;
             border-radius: 8px;
             color: white;
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            min-width: 110px;
+            flex: 1;
+            min-width: 100px;
         }
-        button:hover {
-            opacity: 0.9;
-            transform: translateY(-1px);
-        }
-        .btn-on { background: #28a745; }
-        .btn-off { background: #dc3545; }
-        .btn-toggle { background: #007bff; }
-        .connection-status {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 15px;
-        }
-        .connected { background: #d4edda; color: #155724; }
-        .disconnected { background: #f8d7da; color: #721c24; }
+        button:hover { opacity: 0.9; transform: translateY(-2px); }
+        button:active { transform: translateY(0); }
+        .btn-on { background: linear-gradient(135deg, #2ecc71 0%, #27ae60 100%); }
+        .btn-off { background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%); }
+        .btn-toggle { background: linear-gradient(135deg, #3498db 0%, #2980b9 100%); }
         .info-panel {
             background: #f8f9fa;
             border-radius: 10px;
@@ -86,29 +86,233 @@
             display: flex;
             justify-content: space-between;
             padding: 6px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid #e9ecef;
         }
         .info-row:last-child { border-bottom: none; }
-        .info-label { color: #666; }
-        .info-value { font-weight: 500; color: #333; }
+        .info-label { color: #6c757d; }
+        .info-value { font-weight: 500; color: #495057; }
+        .key-hint {
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 15px;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🚀 Управление ESP8266</h1>
+        <h1>🚀 Управление ESP8266 (MQTT)</h1>
         
         <div class="connection-status disconnected" id="connStatus">
-            ❌ Отключено
+            ❌ Не подключено
         </div>
         
         <div class="status-box">
-            <div style="font-size: 13px; color: #666;">СТАТУС</div>
+            <div style="font-size: 13px; color: #6c757d;">ТЕКУЩИЙ СТАТУС</div>
             <div class="led-status" id="ledStatus">🔴 ВЫКЛ</div>
-            <div style="color: #888; font-size: 13px;">
+            <div style="color: #6c757d; font-size: 13px;">
                 Последняя команда: <span id="lastCmd">нет</span>
             </div>
         </div>
         
+        <div class="controls">
+            <button class="btn-on" onclick="sendCommand('ON')">✅ ВКЛ</button>
+            <button class="btn-off" onclick="sendCommand('OFF')">❌ ВЫКЛ</button>
+            <button class="btn-toggle" onclick="sendCommand('TOGGLE')">🔄 ПЕРЕКЛ</button>
+        </div>
+        
+        <div class="info-panel">
+            <div class="info-row">
+                <span class="info-label">📶 Wi-Fi сигнал:</span>
+                <span class="info-value" id="wifiStr">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">🌐 IP адрес:</span>
+                <span class="info-value" id="ipAddr">—</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">🔗 MQTT брокер:</span>
+                <span class="info-value">srv2.clusterfly.ru:443</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">👤 Аккаунт:</span>
+                <span class="info-value">user_5e8d3cf8</span>
+            </div>
+        </div>
+        
+        <div class="key-hint">
+            Горячие клавиши: 1 (ВКЛ), 0 (ВЫКЛ), Пробел (Переключить)
+        </div>
+    </div>
+
+    <script>
+    // ================= НАСТРОЙКИ =================
+    const MQTT_CONFIG = {
+        host: "srv2.clusterfly.ru",
+        port: 443,
+        clientId: "telegram_" + Math.random().toString(36).substr(2, 9),
+        username: "user_5e8d3cf8",
+        password: "12345678",
+        topicControl: "user_5e8d3cf8/esp/control",
+        topicStatus: "user_5e8d3cf8/esp/status"
+    };
+
+    // ================= ПЕРЕМЕННЫЕ =================
+    let mqttClient = null;
+    let connectionAttempts = 0;
+    const MAX_ATTEMPTS = 10;
+
+    // ================= ФУНКЦИИ =================
+    function updateUI(data) {
+        try {
+            const ledStatus = document.getElementById('ledStatus');
+            if (data.led === true || data.led === "true") {
+                ledStatus.innerHTML = '🟢 ВКЛ';
+                ledStatus.style.color = '#28a745';
+            } else {
+                ledStatus.innerHTML = '🔴 ВЫКЛ';
+                ledStatus.style.color = '#dc3545';
+            }
+            
+            document.getElementById('wifiStr').textContent = 
+                data.rssi ? data.rssi + ' dBm' : '—';
+            document.getElementById('ipAddr').textContent = data.ip || '—';
+        } catch (error) {
+            console.error("Ошибка обновления UI:", error);
+        }
+    }
+
+    function sendCommand(cmd) {
+        if (!mqttClient || !mqttClient.isConnected()) {
+            alert("❌ Нет подключения к MQTT брокеру!\nПопробуйте обновить страницу.");
+            return;
+        }
+        
+        try {
+            const message = new Paho.Message(cmd);
+            message.destinationName = MQTT_CONFIG.topicControl;
+            message.qos = 0;
+            mqttClient.send(message);
+            
+            document.getElementById('lastCmd').textContent = cmd;
+            console.log("📤 Команда отправлена:", cmd);
+        } catch (error) {
+            console.error("❌ Ошибка отправки команды:", error);
+            alert("Ошибка отправки команды. Проверьте консоль.");
+        }
+    }
+
+    function connectMqtt() {
+        connectionAttempts++;
+        
+        if (connectionAttempts > MAX_ATTEMPTS) {
+            document.getElementById('connStatus').innerHTML = 
+                '⛔ Превышено число попыток';
+            return;
+        }
+
+        console.log(`Попытка подключения ${connectionAttempts}/${MAX_ATTEMPTS}...`);
+
+        // Создаем клиент
+        mqttClient = new Paho.Client(
+            MQTT_CONFIG.host,
+            MQTT_CONFIG.port,
+            MQTT_CONFIG.clientId
+        );
+
+        // Настройки подключения
+        const options = {
+            userName: MQTT_CONFIG.username,
+            password: MQTT_CONFIG.password,
+            useSSL: true,
+            timeout: 10,
+            keepAliveInterval: 30,
+            cleanSession: true,
+            onSuccess: function() {
+                console.log("✅ Успешное подключение к MQTT");
+                document.getElementById('connStatus').className = 'connection-status connected';
+                document.getElementById('connStatus').innerHTML = '✅ Подключено';
+                
+                // Подписываемся на топик статуса
+                mqttClient.subscribe(MQTT_CONFIG.topicStatus, { qos: 0 });
+                
+                // Сбрасываем счетчик попыток
+                connectionAttempts = 0;
+            },
+            onFailure: function(error) {
+                console.error("❌ Ошибка подключения:", error.errorMessage);
+                document.getElementById('connStatus').className = 'connection-status disconnected';
+                document.getElementById('connStatus').innerHTML = 
+                    `❌ Ошибка (попытка ${connectionAttempts})`;
+                
+                // Пробуем снова через 3 секунды
+                setTimeout(connectMqtt, 3000);
+            }
+        };
+
+        // Обработчики событий
+        mqttClient.onConnectionLost = function(response) {
+            console.warn("⚠️ Соединение потеряно:", response.errorMessage);
+            document.getElementById('connStatus').className = 'connection-status disconnected';
+            document.getElementById('connStatus').innerHTML = '⚠️ Переподключение...';
+            
+            setTimeout(connectMqtt, 2000);
+        };
+
+        mqttClient.onMessageArrived = function(message) {
+            try {
+                console.log("📥 Получено сообщение:", message.destinationName, message.payloadString);
+                
+                if (message.destinationName === MQTT_CONFIG.topicStatus) {
+                    const data = JSON.parse(message.payloadString);
+                    updateUI(data);
+                }
+            } catch (error) {
+                console.error("❌ Ошибка обработки сообщения:", error);
+            }
+        };
+
+        // Пытаемся подключиться
+        try {
+            mqttClient.connect(options);
+        } catch (error) {
+            console.error("❌ Критическая ошибка подключения:", error);
+            setTimeout(connectMqtt, 5000);
+        }
+    }
+
+    // ================= ГЛОБАЛЬНЫЕ СОБЫТИЯ =================
+    document.addEventListener('keydown', function(e) {
+        if (e.key === '1' || e.key === 'Num1') sendCommand('ON');
+        else if (e.key === '0' || e.key === 'Num0') sendCommand('OFF');
+        else if (e.key === ' ') {
+            e.preventDefault();
+            sendCommand('TOGGLE');
+        }
+    });
+
+    window.addEventListener('load', function() {
+        console.log("🚀 Страница загружена, начинаем подключение...");
+        setTimeout(connectMqtt, 1000);
+    });
+
+    // Автопереподключение каждые 30 секунд
+    setInterval(function() {
+        if (mqttClient && !mqttClient.isConnected()) {
+            console.log("🔄 Проверка соединения...");
+            connectMqtt();
+        }
+    }, 30000);
+    </script>
+
+    <!-- ПОДКЛЮЧАЕМ БИБЛИОТЕКУ MQTT -->
+    <!-- УДАЛИТЬ эту строку, если используете отдельный файл mqtt.js -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/paho-mqtt@1.1.0/paho-mqtt.min.js"></script> -->
+    
+    <!-- Если у вас есть файл mqtt.js в той же папке, подключите его так: -->
+    <script src="mqtt.js"></script>
+</body>
+</html>        
         <div class="controls">
             <button class="btn-on" onclick="sendCommand('ON')">✅ ВКЛ</button>
             <button class="btn-off" onclick="sendCommand('OFF')">❌ ВЫКЛ</button>
