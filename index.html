@@ -426,72 +426,191 @@
     }
 
     function sendCommand(cmd) {
-        if(mqttClient && mqttClient.isConnected()) {
-            lastCommand = cmd;
-            const message = new Paho.Message(cmd);
-            message.destinationName = MQTT_CONFIG.topicControl;
-            mqttClient.send(message);
-            console.log("Команда отправлена:", cmd);
+<script>
+// ================= НАСТРОЙКИ =================
+const MQTT_CONFIG = {
+    host: "srv2.clusterfly.ru",
+    // Список портов для перебора (в порядке приоритета)
+    ports: [443, 8884, 8084, 9994],
+    clientId: "telegram_" + Math.random().toString(36).substr(2, 9),
+    username: "user_5e8d3cf8",
+    password: "12345678",
+    topicControl: "user_5e8d3cf8/esp/control",
+    topicStatus: "user_5e8d3cf8/esp/status"
+};
+
+// ================= ПЕРЕМЕННЫЕ =================
+let mqttClient = null;
+let currentPortIndex = 0;
+let isConnecting = false;
+
+// ================= ФУНКЦИИ =================
+function updateUI(data) {
+    try {
+        const ledStatus = document.getElementById('ledStatus');
+        if (data.led === true || data.led === "true" || data.led === 1) {
+            ledStatus.innerHTML = '🟢 ВКЛ';
+            ledStatus.style.color = '#28a745';
         } else {
-            alert("Ошибка: нет подключения к MQTT брокеру");
+            ledStatus.innerHTML = '🔴 ВЫКЛ';
+            ledStatus.style.color = '#dc3545';
+        }
+        
+        document.getElementById('wifiStr').textContent = 
+            data.rssi ? data.rssi + ' dBm' : '—';
+        document.getElementById('ipAddr').textContent = data.ip || '—';
+    } catch (error) {
+        console.error("Ошибка обновления UI:", error);
+    }
+}
+
+function sendCommand(cmd) {
+    if (!mqttClient || !mqttClient.isConnected()) {
+        alert("❌ Нет подключения к MQTT брокеру!\nПроверяем доступные порты...");
+        connectMqtt();
+        return;
+    }
+    
+    try {
+        const message = new Paho.Message(cmd);
+        message.destinationName = MQTT_CONFIG.topicControl;
+        message.qos = 0;
+        mqttClient.send(message);
+        
+        document.getElementById('lastCmd').textContent = cmd;
+        console.log("📤 Команда отправлена:", cmd);
+    } catch (error) {
+        console.error("❌ Ошибка отправки команды:", error);
+        alert("Ошибка отправки команды. Проверьте консоль.");
+    }
+}
+
+function tryNextPort() {
+    currentPortIndex++;
+    
+    if (currentPortIndex >= MQTT_CONFIG.ports.length) {
+        // Перепробовали все порты
+        document.getElementById('connStatus').innerHTML = 
+            '⛔ Все порты заблокированы';
+        isConnecting = false;
+        return false;
+    }
+    
+    console.log(`Пробуем следующий порт: ${MQTT_CONFIG.ports[currentPortIndex]}`);
+    document.getElementById('connStatus').innerHTML = 
+        `🔄 Пробуем порт ${MQTT_CONFIG.ports[currentPortIndex]}...`;
+    
+    setTimeout(connectMqtt, 1000);
+    return true;
+}
+
+function connectMqtt() {
+    if (isConnecting) return;
+    isConnecting = true;
+    
+    const currentPort = MQTT_CONFIG.ports[currentPortIndex];
+    console.log(`Попытка подключения к ${MQTT_CONFIG.host}:${currentPort}`);
+    
+    // Закрываем предыдущее соединение
+    if (mqttClient && mqttClient.isConnected()) {
+        mqttClient.disconnect();
+    }
+    
+    // Создаем новый клиент
+    mqttClient = new Paho.Client(
+        MQTT_CONFIG.host,
+        Number(currentPort),
+        MQTT_CONFIG.clientId
+    );
+    
+    // Настройки подключения
+    const options = {
+        userName: MQTT_CONFIG.username,
+        password: MQTT_CONFIG.password,
+        useSSL: true,
+        timeout: 5,
+        keepAliveInterval: 20,
+        cleanSession: true,
+        onSuccess: function() {
+            console.log(`✅ Успешное подключение через порт ${currentPort}`);
+            document.getElementById('connStatus').className = 'connection-status connected';
+            document.getElementById('connStatus').innerHTML = 
+                `✅ Подключено (порт ${currentPort})`;
+            
+            // Подписываемся на топик статуса
+            mqttClient.subscribe(MQTT_CONFIG.topicStatus, { qos: 0 });
+            isConnecting = false;
+        },
+        onFailure: function(error) {
+            console.error(`❌ Ошибка на порту ${currentPort}:`, error.errorMessage);
+            isConnecting = false;
+            
+            // Пробуем следующий порт
+            if (!tryNextPort()) {
+                document.getElementById('connStatus').innerHTML = 
+                    '⛔ Не удалось подключиться ни к одному порту';
+            }
+        }
+    };
+    
+    // Обработчики событий
+    mqttClient.onConnectionLost = function(response) {
+        console.warn("⚠️ Соединение потеряно:", response.errorMessage);
+        document.getElementById('connStatus').className = 'connection-status disconnected';
+        document.getElementById('connStatus').innerHTML = '⚠️ Переподключение...';
+        
+        setTimeout(connectMqtt, 3000);
+    };
+    
+    mqttClient.onMessageArrived = function(message) {
+        try {
+            console.log("📥 Получено:", message.destinationName, message.payloadString);
+            
+            if (message.destinationName === MQTT_CONFIG.topicStatus) {
+                const data = JSON.parse(message.payloadString);
+                updateUI(data);
+            }
+        } catch (error) {
+            console.error("❌ Ошибка обработки сообщения:", error);
+        }
+    };
+    
+    // Пытаемся подключиться
+    try {
+        mqttClient.connect(options);
+    } catch (error) {
+        console.error("❌ Критическая ошибка подключения:", error);
+        isConnecting = false;
+        
+        if (!tryNextPort()) {
+            document.getElementById('connStatus').innerHTML = 
+                '⛔ Ошибка при создании соединения';
         }
     }
+}
 
-    // Горячие клавиши
-    document.addEventListener('keydown', function(e) {
-        if(e.key === '1') sendCommand('ON');
-        else if(e.key === '0') sendCommand('OFF');
-        else if(e.key === ' ') {
-            e.preventDefault();
-            sendCommand('TOGGLE');
-        }
-    });
+// ================= ГЛОБАЛЬНЫЕ СОБЫТИЯ =================
+document.addEventListener('keydown', function(e) {
+    if (e.key === '1' || e.key === 'Num1') sendCommand('ON');
+    else if (e.key === '0' || e.key === 'Num0') sendCommand('OFF');
+    else if (e.key === ' ') {
+        e.preventDefault();
+        sendCommand('TOGGLE');
+    }
+});
 
-    // Автоматическое подключение
-    window.addEventListener('load', connectMqtt);
-    </script>
+window.addEventListener('load', function() {
+    console.log("🚀 Страница загружена, начинаем подключение...");
+    setTimeout(connectMqtt, 500);
+});
 
-    <!-- ВСТРАИВАЕМ ВСЮ БИБЛИОТЕКУ PAHO MQTT ПРЯМО ЗДЕСЬ -->
-    <script>
-    // Библиотека Paho MQTT (версия 1.1.0)
-    var Paho;
-    (function (exports) {
-        'use strict';
-        var Paho = exports.Paho || {};
-        if (typeof module !== 'undefined' && module.exports) {
-            exports = module.exports = Paho;
-        } else {
-            exports.Paho = Paho;
-        }
-        Paho.Client = function (host, port, clientId) {
-            // Основной класс клиента MQTT
-            this._host = host;
-            this._port = port;
-            this._clientId = clientId;
-            this._isConnected = false;
-            this.connect = function(options) {
-                console.log("Подключение к " + host + ":" + port);
-                // Упрощенная логика подключения
-                setTimeout(function() {
-                    if (options.onSuccess) options.onSuccess();
-                }, 100);
-            };
-            this.disconnect = function() { this._isConnected = false; };
-            this.isConnected = function() { return this._isConnected; };
-            this.subscribe = function(topic, opts) { console.log("Подписка на " + topic); };
-            this.unsubscribe = function(topic) {};
-            this.send = function(message) {
-                console.log("Отправка в " + message.destinationName + ": " + message.payloadString);
-                // В реальном коде здесь будет WebSocket отправка
-            };
-            this.onConnectionLost = null;
-            this.onMessageArrived = null;
-        };
-        Paho.Message = function (payload) {
-            this.payloadString = payload;
-            this.destinationName = "";
-        };
-    })(typeof window !== 'undefined' ? window : this);
-    </script>
+// Автопереподключение каждые 30 секунд
+setInterval(function() {
+    if (mqttClient && !mqttClient.isConnected() && !isConnecting) {
+        console.log("🔄 Проверка соединения...");
+        connectMqtt();
+    }
+}, 30000);
+</script>
 </body>
 </html>
