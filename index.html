@@ -3,64 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- ИСПРАВЛЕННАЯ ССЫЛКА НА СКРИПТ НИЖЕ -->
     <script src="https://telegram.org"></script>
     <title>ESP8266 Control</title>
     <style>
-        body {
-            background-color: #1c1c1c;
-            color: white;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
-        }
-        h1 { margin-bottom: 30px; font-size: 24px; color: #0088cc; }
-        .btn {
-            width: 80%;
-            max-width: 300px;
-            padding: 20px;
-            margin: 10px;
-            border: none;
-            border-radius: 15px;
-            font-size: 18px;
-            font-weight: bold;
-            cursor: pointer;
-            transition: transform 0.1s, opacity 0.2s;
-            color: white;
-        }
-        .btn:active { transform: scale(0.95); opacity: 0.8; }
-        .on { background-color: #2ecc71; box-shadow: 0 4px #27ae60; }
-        .off { background-color: #e74c3c; box-shadow: 0 4px #c0392b; }
-        #status { margin-top: 20px; font-size: 14px; color: #888; }
+        body { background-color: #1c1c1c; color: white; text-align: center; font-family: sans-serif; padding-top: 50px; }
+        .btn { width: 80%; max-width: 300px; padding: 20px; margin: 10px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; color: white; }
+        .on { background-color: #2ecc71; }
+        .off { background-color: #e74c3c; }
     </style>
 </head>
 <body>
-
     <h1>Управление ESP8266</h1>
-    
     <button class="btn on" onclick="sendData('led_on')">ВКЛЮЧИТЬ СВЕТ</button>
     <button class="btn off" onclick="sendData('led_off')">ВЫКЛЮЧИТЬ СВЕТ</button>
 
-    <div id="status">Ожидание команды...</div>
-
     <script>
+        // 1. Сначала создаем переменную
         const tg = window.Telegram.WebApp;
         
-        // Ожидаем инициализации
+        // 2. Сразу инициализируем
         tg.ready();
         tg.expand();
 
         function sendData(command) {
             try {
-                document.getElementById('status').innerText = "Отправка: " + command;
-                // Отправляем данные боту
-                tg.sendData(command); 
+                // 3. Теперь вызываем отправку
+                tg.sendData(command);
             } catch (e) {
-                document.getElementById('status').innerText = "Ошибка: " + e;
+                alert("Ошибка: " + e.message);
             }
         }
     </script>
