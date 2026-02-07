@@ -7,30 +7,42 @@
     <title>ESP8266 Control</title>
     <style>
         body { background-color: #1c1c1c; color: white; text-align: center; font-family: sans-serif; padding-top: 50px; }
-        .btn { width: 80%; max-width: 300px; padding: 20px; margin: 10px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; color: white; }
+        .btn { width: 80%; max-width: 300px; padding: 20px; margin: 10px; border: none; border-radius: 15px; font-size: 18px; font-weight: bold; color: white; cursor: pointer; }
         .on { background-color: #2ecc71; }
         .off { background-color: #e74c3c; }
     </style>
 </head>
 <body>
     <h1>Управление ESP8266</h1>
-    <button class="btn on" onclick="sendData('led_on')">ВКЛЮЧИТЬ СВЕТ</button>
-    <button class="btn off" onclick="sendData('led_off')">ВЫКЛЮЧИТЬ СВЕТ</button>
+    <button class="btn on" id="btnOn">ВКЛЮЧИТЬ СВЕТ</button>
+    <button class="btn off" id="btnOff">ВЫКЛЮЧИТЬ СВЕТ</button>
+    <div id="status" style="margin-top: 20px; color: #888;"></div>
 
     <script>
-        // 1. Сначала создаем переменную
-        const tg = window.Telegram.WebApp;
-        
-        // 2. Сразу инициализируем
-        tg.ready();
-        tg.expand();
+        // Ждем полной загрузки страницы
+        window.addEventListener('load', function() {
+            // Инициализация переменной внутри события загрузки
+            const tg = window.Telegram.WebApp;
+            tg.ready();
+            tg.expand();
 
-        function sendData(command) {
+            document.getElementById('status').innerText = "Пульт готов к работе";
+
+            // Назначаем функции на кнопки программно
+            document.getElementById('btnOn').onclick = function() {
+                sendData(tg, 'led_on');
+            };
+            document.getElementById('btnOff').onclick = function() {
+                sendData(tg, 'led_off');
+            };
+        });
+
+        function sendData(tg, command) {
             try {
-                // 3. Теперь вызываем отправку
+                // Метод sendData работает ТОЛЬКО если открыто через обычную кнопку (не Inline)
                 tg.sendData(command);
             } catch (e) {
-                alert("Ошибка: " + e.message);
+                document.getElementById('status').innerText = "Ошибка: " + e.message;
             }
         }
     </script>
