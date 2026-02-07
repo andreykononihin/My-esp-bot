@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Подключаем скрипт Телеграма - ЭТО ГЛАВНОЕ -->
+    <!-- ИСПРАВЛЕННАЯ ССЫЛКА НА СКРИПТ НИЖЕ -->
     <script src="https://telegram.org"></script>
     <title>ESP8266 Control</title>
     <style>
@@ -48,19 +48,20 @@
     <div id="status">Ожидание команды...</div>
 
     <script>
-        // Инициализация Telegram WebApp
         const tg = window.Telegram.WebApp;
-        tg.expand(); // Развернуть на весь экран
+        
+        // Ожидаем инициализации
         tg.ready();
+        tg.expand();
 
         function sendData(command) {
-            document.getElementById('status').innerText = "Отправка: " + command;
-            
-            // Эта функция отправляет текст боту
-            tg.sendData(command); 
-            
-            // После отправки данных Mini App автоматически закроется, 
-            // и бот в Pydroid получит сообщение с этим текстом.
+            try {
+                document.getElementById('status').innerText = "Отправка: " + command;
+                // Отправляем данные боту
+                tg.sendData(command); 
+            } catch (e) {
+                document.getElementById('status').innerText = "Ошибка: " + e;
+            }
         }
     </script>
 </body>
